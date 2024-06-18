@@ -427,6 +427,21 @@
   </Targets>
 
   <RTE>
+    <packages>
+      <filter>
+        <targetInfos/>
+      </filter>
+      <package name="CMSIS" vendor="ARM" version="6.0.0">
+        <targetInfos>
+          <targetInfo name="TM4C123G" versionMatchMode="fixed"/>
+        </targetInfos>
+      </package>
+      <package name="TM4C_DFP" vendor="Keil" version="1.1.0">
+        <targetInfos>
+          <targetInfo name="TM4C123G" versionMatchMode="fixed"/>
+        </targetInfos>
+      </package>
+    </packages>
     <apis/>
     <components>
       <component Cclass="CMSIS" Cgroup="CORE" Cvendor="ARM" Cversion="6.0.0" condition="ARMv6_7_8-M Device">

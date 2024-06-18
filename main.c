@@ -3,6 +3,7 @@
 #include "uart.h"
 #include "TM4C123.h"                    // Device header
 
+void delay(unsigned long delay);
 
 int main(void)
 {
@@ -13,12 +14,12 @@ int main(void)
 	// main loop
 	while(1)
 	{
-		led_switches();
-		print_string("Enter \"r\", \"g\", or \"b\":\n\r");
+		// Wait until the user inputs a character then print it on the Putty terminal
+		c = busy_wait_read_char();
+		busy_wait_write_char(c);
 		
-		c = read_char();
-		print_char(c);
-		print_string("\n\r");
+		// show next character on new line in putty terminal
+		busy_wait_write_char('\n');
 		
 		switch(c)
 		{
@@ -27,8 +28,17 @@ int main(void)
 				break;
 			
 			default:
-				GPIO_PORTF_DATA_R = 0;
+				GPIO_PORTF_DATA_R &= ~0x0Eu;
+				break;
 		}
 	}
+}
+
+
+// Simple delay function just to quickly test certain functions
+void delay(unsigned long delay)
+{
+	unsigned long i;
+	for (i = 0; i < delay; i++);
 }
 
