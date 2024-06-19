@@ -1,7 +1,10 @@
 #include "uart.h"
 #include "defines.h"
+#include <string.h>
 
 #define NULL 0
+#define TRUE 1
+#define FALSE 0
 
 
 // Changed UART0_CC_R from 0 (system clock) to 0x5 (PIOSC Precision Internal Oscillator)and it finally got the UART transmission to work properly!!
@@ -36,6 +39,58 @@ void uart_0_initialization(void)
 	
 }
 
+// Function to set the LEDs on the MCU depending on the string input from the user
+//
+// Color    LED(s) PortF
+// dark     ----    0x00
+// red      --R-    0x02
+// blue     -B--    0x04
+// green    G---    0x08
+// pink			-BR-    0x06
+// yellow		G-R-    0x0A
+// cyan			GB--    0x0C
+// white		GBR-    0x0E
+void uart_busy_wait_menu(char* buffer, unsigned long length)
+{
+	busy_wait_write_string("Enter one of the following colors:\n");
+	busy_wait_write_string("Red, Blue, Green, Pink, Yellow, Cyan, White, Black\n");
+	busy_wait_read_string(buffer, length);
+	busy_wait_write_string("\n\n");
+	
+	if(strings_compare_case_insensitive(buffer, "red") == 0)
+	{
+		GPIO_PORTF_DATA_R = 0x02;
+	}
+	else if(strings_compare_case_insensitive(buffer, "blue") == 0)
+	{
+		GPIO_PORTF_DATA_R = 0x04;
+	}
+	else if(strings_compare_case_insensitive(buffer, "green") == 0)
+	{
+		GPIO_PORTF_DATA_R = 0x08;
+	}
+	else if(strings_compare_case_insensitive(buffer, "pink") == 0)
+	{
+		GPIO_PORTF_DATA_R = 0x06;
+	}
+	else if(strings_compare_case_insensitive(buffer, "yellow") == 0)
+	{
+		GPIO_PORTF_DATA_R = 0x0A;
+	}
+	else if(strings_compare_case_insensitive(buffer, "cyan") == 0)
+	{
+		GPIO_PORTF_DATA_R = 0x0C;
+	}
+	else if(strings_compare_case_insensitive(buffer, "white") == 0)
+	{
+		GPIO_PORTF_DATA_R = 0x0E;
+	}
+	else
+	{
+		GPIO_PORTF_DATA_R = 0x00;
+	}
+}
+
 char busy_wait_read_char(void)
 {
 	while((UART0_FR_R & 0x10) != 0);
@@ -55,23 +110,37 @@ void busy_wait_write_char(char c)
 	UART0_DR_R = c;
 }
 
+// NOTE:
+// Need to use && check in if(c != '\n' && c != '\r') because || would always evaluate to true.
+// if c == '\n' then c != '\r' would be true so the statement would be true with || and vice versa.
+// if c is any other character, it would also evalulate to true, therefore the condition is always true.
 void busy_wait_read_string(char* buffer, unsigned long length)
 {
 	unsigned long i = 0;	// used to iterate through the incoming buffer array
 	unsigned char c;	// used to read in data from the receive FIFO
+	unsigned long exit_flag = 0;
 
-	while(i < length - 1)
+	while(exit_flag == FALSE)
 	{
-		c = busy_wait_read_char();	// read in the character using busy wait
-		busy_wait_write_char(c);
-		if(c == '\n' || c == '\r')	// if the user has finished typing the string, terminate the string in the buffer
+		c = busy_wait_read_char();	// read in the character
+		busy_wait_write_char(c);		// display the character immediately
+		
+		// if its a character, keep writing the string into the buffer
+		if(c != '\n' && c != '\r')	
+		{
+			buffer[i++] = c;
+			if(i == (length - 1))			// if we're at the last index of the buffer, put a null terminator
+			{
+				buffer[i] = '\0';
+				exit_flag = 1;
+			}
+		}
+		else	// if the input character is a '\n' or '\r'
 		{
 			buffer[i] = '\0';
-			return;
+			exit_flag = 1;
 		}
-		buffer[i++] = c;	// keep writing the string
 	}
-	buffer[i] = '\0';	// if we reach the last available index in the buffer, put a null terminator
 }
 
 void busy_wait_write_string(char* string)
@@ -80,28 +149,63 @@ void busy_wait_write_string(char* string)
 	{
 		return;
 	}
-	// read in the string a character at a time until it reaches the null terminator '\0'
+	
+	// print the string a character at a time until it reaches the null terminator '\0'
 	while(*string)
 	{
-		busy_wait_write_char(*(string++));
+		busy_wait_write_char(*string);
+		string++;
 	}
 }
 
-void busy_wait_read_string_flag(char* buffer, unsigned long length)
-{
-	unsigned long i = 0;	// used to iterate through the incoming buffer array
-	unsigned char c;	// used to read in data from the receive FIFO
 
-	while(i < length - 1)
+// Function to compare case insenstiive strings
+// This is so if the user types RED or Red or red, it shouldn't matter when trying to choose the LED color
+unsigned long strings_compare_case_insensitive(const char* string_1, const char* string_2)
+{
+	char char_1, char_2;
+	
+	// Keep comparing the strings as long as they're not NULL
+	while(*string_1 && *string_2)
 	{
-		c = busy_wait_read_char();	// read in the character using busy wait
-		busy_wait_write_char(c);
-		if(c == '\n' || c == '\r')	// if the user has finished typing the string, terminate the string in the buffer
+		// Converting uppercase characters to lower case characters
+		if(*string_1 >= 'A' && *string_1 <= 'Z')
 		{
-			buffer[i] = '\0';
-			return;
+			char_1 = *string_1 - 'A' + 'a';
 		}
-		buffer[i++] = c;	// keep writing the string
+		else
+		{
+			char_1 = *string_1;
+		}
+		
+		if(*string_2 >= 'A' && *string_2 <= 'Z')
+		{
+			char_2 = *string_2 - 'A' + 'a';
+		}
+		else
+		{
+			char_2 = *string_2;
+		}
+		
+		// If at any point the characters are a mismatch
+		//	return 1 to say they are not equal
+		if(char_1 != char_2)
+		{
+			return 1;
+		}
+		
+		// increment the pointers to keep the check going
+		string_1++;
+		string_2++;
 	}
-	buffer[i] = '\0';	// if we reach the last available index in the buffer, put a null terminator
+	// if both strings start with the same string but are of different lengths,
+	//	this also means they are not equal, so return 1
+	//	i.e. "hello" and "helloworld"
+	if(*string_1 || *string_2)
+	{
+		return 1;
+	}
+	
+	// if all of the checks pass, then they are the same string so return 0
+	return 0;
 }
