@@ -1,6 +1,8 @@
 #include "uart.h"
 #include "defines.h"
 
+#define NULL 0
+
 
 // Changed UART0_CC_R from 0 (system clock) to 0x5 (PIOSC Precision Internal Oscillator)and it finally got the UART transmission to work properly!!
 // Presumably the system clock is not default set to 16 MHz clock frequency? I'm not exactly sure why that is.
@@ -39,17 +41,67 @@ char busy_wait_read_char(void)
 	while((UART0_FR_R & 0x10) != 0);
 	return UART0_DR_R & 0xFF;
 }
-void busy_wait_write_char(char data)
+
+void busy_wait_write_char(char c)
 {
 	// some terminals expect carriage return '\r' before line-feed '\n' for proper new line.
 	// this seems to happen on putty where if you don't have it, it'll print the characters
 	// on the terminal in a diagonal fashion
-	if (data == '\n')
+	if (c == '\n')
 	{
 		busy_wait_write_char('\r');
 	}
 	while ((UART0_FR_R & 0x20) != 0);
-	UART0_DR_R = data;
+	UART0_DR_R = c;
 }
 
+void busy_wait_read_string(char* buffer, unsigned long length)
+{
+	unsigned long i = 0;	// used to iterate through the incoming buffer array
+	unsigned char c;	// used to read in data from the receive FIFO
 
+	while(i < length - 1)
+	{
+		c = busy_wait_read_char();	// read in the character using busy wait
+		busy_wait_write_char(c);
+		if(c == '\n' || c == '\r')	// if the user has finished typing the string, terminate the string in the buffer
+		{
+			buffer[i] = '\0';
+			return;
+		}
+		buffer[i++] = c;	// keep writing the string
+	}
+	buffer[i] = '\0';	// if we reach the last available index in the buffer, put a null terminator
+}
+
+void busy_wait_write_string(char* string)
+{
+	if (string == NULL)
+	{
+		return;
+	}
+	// read in the string a character at a time until it reaches the null terminator '\0'
+	while(*string)
+	{
+		busy_wait_write_char(*(string++));
+	}
+}
+
+void busy_wait_read_string_flag(char* buffer, unsigned long length)
+{
+	unsigned long i = 0;	// used to iterate through the incoming buffer array
+	unsigned char c;	// used to read in data from the receive FIFO
+
+	while(i < length - 1)
+	{
+		c = busy_wait_read_char();	// read in the character using busy wait
+		busy_wait_write_char(c);
+		if(c == '\n' || c == '\r')	// if the user has finished typing the string, terminate the string in the buffer
+		{
+			buffer[i] = '\0';
+			return;
+		}
+		buffer[i++] = c;	// keep writing the string
+	}
+	buffer[i] = '\0';	// if we reach the last available index in the buffer, put a null terminator
+}
