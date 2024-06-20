@@ -1,6 +1,5 @@
 #include "uart.h"
 #include "defines.h"
-#include <string.h>
 
 #define NULL 0
 #define TRUE 1
@@ -55,6 +54,8 @@ void uart_busy_wait_menu(char* buffer, unsigned long length)
 	busy_wait_write_string("Enter one of the following colors:\n");
 	busy_wait_write_string("Red, Blue, Green, Pink, Yellow, Cyan, White, Black\n");
 	busy_wait_read_string(buffer, length);
+	busy_wait_write_string("Received: ");
+	busy_wait_write_string(buffer);
 	busy_wait_write_string("\n\n");
 	
 	if(strings_compare_case_insensitive(buffer, "red") == 0)
@@ -102,7 +103,7 @@ void busy_wait_write_char(char c)
 	// some terminals expect carriage return '\r' before line-feed '\n' for proper new line.
 	// this seems to happen on putty where if you don't have it, it'll print the characters
 	// on the terminal in a diagonal fashion
-	if (c == '\n')
+	if(c == '\n')
 	{
 		busy_wait_write_char('\r');
 	}
@@ -117,7 +118,7 @@ void busy_wait_write_char(char c)
 void busy_wait_read_string(char* buffer, unsigned long length)
 {
 	unsigned long i = 0;	// used to iterate through the incoming buffer array
-	unsigned char c;	// used to read in data from the receive FIFO
+	unsigned char c;			// used to read in data from the receive FIFO
 	unsigned long exit_flag = 0;
 
 	while(exit_flag == FALSE)
@@ -125,8 +126,17 @@ void busy_wait_read_string(char* buffer, unsigned long length)
 		c = busy_wait_read_char();	// read in the character
 		busy_wait_write_char(c);		// display the character immediately
 		
-		// if its a character, keep writing the string into the buffer
-		if(c != '\n' && c != '\r')	
+		// IMPORTANT check for 'DEL' or '\b' character so the buffer doesn't get flooded with backspace characters
+		// and destroy the string written in the buffer. Decrementing the buffer index also "deletes" the character
+		// in the buffer as well, just like in the terminal.
+		if(c == 0x7F)		
+		{
+			if(i > 0)
+			{
+				i--;
+			}
+		}
+		else if(c != '\n' && c != '\r')	// if its a character, keep writing the string into the buffer
 		{
 			buffer[i++] = c;
 			if(i == (length - 1))			// if we're at the last index of the buffer, put a null terminator
@@ -161,6 +171,11 @@ void busy_wait_write_string(char* string)
 
 // Function to compare case insenstiive strings
 // This is so if the user types RED or Red or red, it shouldn't matter when trying to choose the LED color
+//
+// BUG: When using the backspace key on the terminal, it puts that ASCII character into the buffer.
+// 			This results in the string compare function failing.
+//			i.e. grww BS BS een, which results in green on the terminal
+//				however the buffer would look like grww@@een where the @'s are just placeholders for ASCII backspace
 unsigned long strings_compare_case_insensitive(const char* string_1, const char* string_2)
 {
 	char char_1, char_2;
@@ -191,6 +206,7 @@ unsigned long strings_compare_case_insensitive(const char* string_1, const char*
 		//	return 1 to say they are not equal
 		if(char_1 != char_2)
 		{
+			// busy_wait_write_string("Strings are NOT equal.\n");
 			return 1;
 		}
 		
@@ -203,9 +219,11 @@ unsigned long strings_compare_case_insensitive(const char* string_1, const char*
 	//	i.e. "hello" and "helloworld"
 	if(*string_1 || *string_2)
 	{
+		// busy_wait_write_string("Strings are NOT equal.\n");
 		return 1;
 	}
 	
 	// if all of the checks pass, then they are the same string so return 0
+	// busy_wait_write_string("Strings are equal.\n");
 	return 0;
 }

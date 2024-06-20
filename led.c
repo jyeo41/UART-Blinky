@@ -54,7 +54,7 @@ void led_switches(void)
 			}
 			else
 			{
-				if (Switch_1 == 1 && Switch_2 == 0)
+				if(Switch_1 == 1 && Switch_2 == 0)
 				{
 					GPIO_PORTF_DATA_R = 0x02;	// Only switch 2, LED is red
 				}
