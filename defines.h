@@ -62,3 +62,4 @@
 #define UART0_FR_R 		(*((volatile unsigned long *) 0x4000C018))
 #define UART0_DR_R 		(*((volatile unsigned long *) 0x4000C000))
 
+#define SUPPRESS_UNUSED __attribute__((unused))

@@ -1,9 +1,8 @@
-#include "defines.h"
+// #include "defines.h"
 #include "led.h"
 #include "uart.h"
-#include "TM4C123.h"                    // Device header
+#include "test.h"
 
-void delay(unsigned long delay);
 
 
 int main(void)
@@ -17,15 +16,8 @@ int main(void)
 	while(1)
 	{
 		uart_busy_wait_menu(buffer, 100);
+		// test_ring_buffer();
 	}
-}
-
-
-// Simple delay function just to quickly test certain functions
-void delay(unsigned long delay)
-{
-	unsigned long i;
-	for (i = 0; i < delay; i++);
 }
 
 /***** Project Notes *****

@@ -1,5 +1,5 @@
 #include "uart.h"
-#include "defines.h"
+//#include "defines.h"
 
 #define NULL 0
 #define TRUE 1
