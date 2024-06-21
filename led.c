@@ -1,5 +1,5 @@
 #include "led.h"
-#include "defines.h"
+//#include "defines.h"
 
 // Port F Initialization Function
 // The steps to initialize were followed through using the datasheet section 10.3

@@ -1,9 +1,8 @@
-#include "defines.h"
+// #include "defines.h"
 #include "led.h"
 #include "uart.h"
-#include "TM4C123.h"                    // Device header
+#include "test.h"
 
-void delay(unsigned long delay);
 
 
 int main(void)

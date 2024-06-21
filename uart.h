@@ -1,3 +1,5 @@
+#include "tm4c123gh6pm.h"    // Device header
+
 //	*** Function Prototypes
 
 void uart_0_initialization(void);

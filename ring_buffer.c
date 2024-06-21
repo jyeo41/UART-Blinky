@@ -26,12 +26,12 @@ unsigned long ring_buffer_read(struct ring_buffer* rb)
 
 bool ring_buffer_is_empty(struct ring_buffer* rb)
 {
-	return rb->counter == 0;	// Buffer is full when both are equal. When initializing, head and tail are both = 0.
+	return (rb->counter == 0);	// Buffer is full when both are equal. When initializing, head and tail are both = 0.
 										// If you write 2 elements then read 2 elements, again head and tail are both equal and its empty.
 }
 
 bool ring_buffer_is_full(struct ring_buffer* rb)
 {
-	return rb->counter == rb->buffer_size; // The buffer is full if adding one more element would make head and tail equal.
+	return (rb->counter == rb->buffer_size); // The buffer is full if adding one more element would make head and tail equal.
 }
 

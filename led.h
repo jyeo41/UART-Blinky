@@ -1,3 +1,5 @@
+#include "tm4c123gh6pm.h"    // Device header
+
 //	*** Global Variables
 
 // Global switch variables to read in from peripherals on PA0 and PA4
