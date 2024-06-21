@@ -16,6 +16,7 @@ int main(void)
 	while(1)
 	{
 		uart_busy_wait_menu(buffer, 100);
+		// test_ring_buffer();
 	}
 }
 
