@@ -20,14 +20,6 @@ int main(void)
 	}
 }
 
-
-// Simple delay function just to quickly test certain functions
-void delay(unsigned long delay)
-{
-	unsigned long i;
-	for (i = 0; i < delay; i++);
-}
-
 /***** Project Notes *****
 // defines.h
 Started with the defines.h to map out the registers I would need for each module by using the datasheet.
