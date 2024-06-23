@@ -1,6 +1,6 @@
+#include "tm4c123gh6pm.h"
 #include "test.h"
 #include "ring_buffer.h"
-#include "tm4c123gh6pm.h"
 
 // Test functions
 
@@ -61,6 +61,5 @@ void test_ring_buffer(void)
 		GPIO_PORTF_DATA_R = 0x00;
 		delay(1000000);
 	}
-	
 }
 

@@ -1,3 +1,6 @@
+#ifndef LED_H
+#define LED_H
+
 #include "tm4c123gh6pm.h"    // Device header
 
 //	*** Global Variables
@@ -11,3 +14,6 @@ extern unsigned long Switch_2;
 //	*** Function Prototypes
 void port_f_initialization(void);
 void led_switches(void);
+void led_toggle(void);
+
+#endif	// LED_H

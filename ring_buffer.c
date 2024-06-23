@@ -12,7 +12,7 @@ void ring_buffer_initialization(struct ring_buffer* rb, unsigned long* buffer, u
 void ring_buffer_write(struct ring_buffer* rb, unsigned long data)
 {
 	rb->buffer[rb->head] = data;									// Set data to the current head index since it is the next available index
-  rb->counter += 1;
+  rb->counter += 1 % rb->buffer_size;
 	rb->head = (rb->head + 1) % rb->buffer_size;	// Increment head by 1 and use % operator to loop around after reaching the end
 }
 

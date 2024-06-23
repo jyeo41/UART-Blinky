@@ -1,29 +1,43 @@
 // #include "defines.h"
 #include "led.h"
-#include "uart.h"
+// #include "uart_busy_wait.h"
+#include "uart_interrupt.h"
 #include "test.h"
+
 
 
 
 int main(void)
 {
-	char buffer[100];
+	// char buffer[100];
+	unsigned char data;
 	port_f_initialization();
-	uart_0_initialization();
 	delay(1000000);
+	uart0_interrupt_initialization();
+	delay(1000000);
+	// Global interrupts enabled by default.
+	// __enable_irq();
 	
 	// main loop
 	while(1)
 	{
-		uart_busy_wait_menu(buffer, 100);
-		// test_ring_buffer();
+		//uart0_interrupt_send_char(&tx_ring_buffer, 'a');
+		//uart0_interrupt_send_char(&tx_ring_buffer, 'b');
+		
+		// Check the status of the rx_ring_buffer in a non-blocking way.
+		// If the receive ISR triggered and put data into the rx_ring_buffer,
+		//	send the char to tx_ring_buffer and enable the transmit interrupt.
+		if(uart0_interrupt_get_char(&rx_ring_buffer, &data))
+		{
+			uart0_interrupt_send_char(&tx_ring_buffer, data);
+		}
 	}
 }
 
 /***** Project Notes *****
 // defines.h
-Started with the defines.h to map out the registers I would need for each module by using the datasheet.
-This was just to practice understanding memory mapped registers.
+Start with the defines.h to map out the registers I would need for each module by using the datasheet.
+This was just to practice understanding memory mapped registers. Eventually switch over to the given vendor header file.
 
 Problem: Mistyped one of the memory mappings and couldn't figure out if it was a problem with the bit setting, or the #define
 Solution: Had to double check and painstakingly check the datasheet to make sure the offsets were correct.
@@ -31,15 +45,15 @@ Solution: Had to double check and painstakingly check the datasheet to make sure
 
 
 // led.c and led.h
-Next the led.c and .h files to test the GPIO pins and make sure the board LED and switches were functioning properly.
+Test the GPIO pins and make sure the board LED and switches were functioning properly.
 I also made sure the Port F Initialization was done properly and to confirm the register mappings in my defines.h were working.
 
 Problem: Ran into a problem with PF0 switch not functioning even though the bits were set correctly.
 Solution: Page 650.Table 10-1 shows PF[0] is locked by default and needs to be unlocked and enabled with the GPIO_LOCK registers GPIO_CR
 
 
-// uart.c and uart.h
-Implemented UART functionality between PC and TM4C123GXL MCU. The goal was to be able to type a user input string from the terminal to
+// uart_busy_wait.c and uart_busy_wait.h
+Implement UART functionality between PC and TM4C123GXL MCU. The goal was to be able to type a user input string from the terminal to
 switch on one of the 8 possible LED colors on the board. Ran into a lot of problems during this and was a learning experience.
 
 Problem: Junk characters being passed in the terminal when typing out characters.
@@ -68,4 +82,15 @@ Solution: The buffer to store the user input string also stores the backspace ch
 					at all when using the backspace key.
 					Edited the uart_read_string() function to have an additional check for the 0x7F ('DEL') to decrement the index of the buffer so the string would
 					be proper when string compare checking for the switch statement. This handles deleting any characters, including spaces. LED always functions properly now.
+					
+					
+// uart_interrupt.c and uart_interrupt.h
+Improve the code to be more efficient using interrupts rather than busy wait.
+
+Problem: Lots of trouble setting up UART0 interrupts to trigger properly.
+Solution: Turns out the vector table in the header file is incorrect.
+					It is shown as 21 as well as 21 in the datasheet, however when I inspected the CMSIS files, it showed the UART0 interrupt as interrupt request 5.
+					After modifying the NVIC_EN and NVIC_PRI appropriately to account for IRQ 5 instead of IRQ 21, the ISR triggered successfully.
+
+
 */
