@@ -76,6 +76,7 @@ void uart0_interrupt_initialization(void)
 	
 	// Enable interrupts for UART specific
 	UART0_IM_R |= 0x10;						// Enable receive interrupts bit 4
+	// UART0_IM_R |= 0x20;						// Enable transmit interrupts bit 4
 																													
   NVIC_EN0_R |= 1 << 5;           												// Enable IRQ 5 (UART0), tried it with IRQ21 and didn't work but setting it to 5 does work
   NVIC_PRI1_R = (NVIC_PRI1_R & 0xFFFF00FF) | (2 << 13); 	// Set priority to 2
@@ -110,47 +111,47 @@ void uart0_interrupt_clear_transmit(void)
 }
 
 // UART0 interrupt service routine
-void UART0_Handler(void)
-{
-	volatile unsigned long txim = UART0_MIS_R & 0x20;	// sanity checking interrupt trigger flag
-	volatile unsigned long rxim = UART0_MIS_R & 0x10;	// sanity checking interrupt trigger flag
-	GPIO_PORTF_DATA_R ^= 0x04;		// set blue LED to confirm ISR is triggered
-	
-	// Receive interrupt triggered
-	// If bit is set in the MIS register AND Receive FIFO is full (data has been received and is ready to be read),
-	// 	put the received data into the rx_ring_buffer
-	if ((UART0_MIS_R & 0x10) && (UART0_FR_R & 0x40))
-	{
-		GPIO_PORTF_DATA_R = 0x02;		// set red LED to confirm it entered the receive interrupt if statement
-		UART0_DR_R = 'R';						// show 'R' on terminal too
-		// Acknowledge receive interrupt
-		uart0_interrupt_clear_receive();
-		
-		// Read the data out from the HW RxFIFO and put it into the rx_ring_buffer
-		// ring_buffer_write(&rx_ring_buffer, UART0_DR_R);
-	}
-	// Transmit interrupt triggered
-	// If interrupt bit is set in the MIS register AND Transmit FIFO is empty (UART is ready to send more data)
-	if ((UART0_MIS_R & 0x20) && (UART0_FR_R & 0x80))
-	{
-		GPIO_PORTF_DATA_R = 0x08;		// set green LED to confirm it entered the transmit interrupt if statement
-		UART0_DR_R = 'G';						// show 'G' on terminal too
-		// Acknowledge transmit receive interrupt
-		uart0_interrupt_clear_transmit();
-		
-		// Also check to make sure the tx_ring_buffer has data to be transmitted
-		if (!ring_buffer_is_empty(&tx_ring_buffer))
-		{
-			UART0_DR_R = ring_buffer_read(&tx_ring_buffer);
-		}
-		// if it doesn't, then disable the interrupt because if theres no data in the tx_ring_buffer to be sent,
-		//	the transmit interrupt should never trigger
-		else
-		{
-			uart0_interrupt_disable_transmit();
-		}
-	}
-}
+//void UART0_Handler(void)
+//{
+//	volatile unsigned long txim = UART0_MIS_R & 0x20;	// sanity checking interrupt trigger flag
+//	volatile unsigned long rxim = UART0_MIS_R & 0x10;	// sanity checking interrupt trigger flag
+//	GPIO_PORTF_DATA_R = 0x04;		// set blue LED to confirm ISR is triggered
+//	
+//	// Receive interrupt triggered
+//	// If bit is set in the MIS register AND Receive FIFO is full (data has been received and is ready to be read),
+//	// 	put the received data into the rx_ring_buffer
+////	if ((UART0_MIS_R & 0x10) && (UART0_FR_R & 0x40))
+////	{
+////		GPIO_PORTF_DATA_R = 0x02;		// set red LED to confirm it entered the receive interrupt if statement
+////		UART0_DR_R = 'R';						// show 'R' on terminal too
+////		// Acknowledge receive interrupt
+////		uart0_interrupt_clear_receive();
+////		
+////		// Read the data out from the HW RxFIFO and put it into the rx_ring_buffer
+////		// ring_buffer_write(&rx_ring_buffer, UART0_DR_R);
+////	}
+//	// Transmit interrupt triggered
+//	// If interrupt bit is set in the MIS register AND Transmit FIFO is empty (UART is ready to send more data)
+//	if ((UART0_MIS_R & 0x20) && (UART0_FR_R & 0x80))
+//	{
+//		GPIO_PORTF_DATA_R = 0x08;		// set green LED to confirm it entered the transmit interrupt if statement
+//		UART0_DR_R = 'G';						// show 'G' on terminal too
+//		// Acknowledge transmit receive interrupt
+//		uart0_interrupt_clear_transmit();
+//		
+//		// Also check to make sure the tx_ring_buffer has data to be transmitted
+//		if (!ring_buffer_is_empty(&tx_ring_buffer))
+//		{
+//			UART0_DR_R = ring_buffer_read(&tx_ring_buffer);
+//		}
+//		// if it doesn't, then disable the interrupt because if theres no data in the tx_ring_buffer to be sent,
+//		//	the transmit interrupt should never trigger
+//		else
+//		{
+//			uart0_interrupt_disable_transmit();
+//		}
+//	}
+//}
 
 // Function to get a single char from the rx_ring_buffer after the ISR has put data into it.
 // It returns a boolean to call uart0_interrupt_send_char() function afterwards if it was successful.
@@ -176,7 +177,3 @@ void uart0_interrupt_send_char(struct ring_buffer* rb, unsigned char c)
 	ring_buffer_write(rb, c);
 	uart0_interrupt_enable_transmit();
 }
-	
-
-
-

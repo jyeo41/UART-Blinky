@@ -14,6 +14,8 @@ void uart0_interrupt_clear_receive(void);
 void uart0_interrupt_clear_transmit(void);
 bool uart0_interrupt_get_char(struct ring_buffer* rb, unsigned char* c);
 void uart0_interrupt_send_char(struct ring_buffer* rb, unsigned char c);
+//bool get_char(uint8_t *c);
+//void send_char(uint8_t c);
 
 
 extern struct ring_buffer rx_ring_buffer;

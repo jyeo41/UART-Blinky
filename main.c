@@ -3,36 +3,109 @@
 // #include "uart_busy_wait.h"
 #include "uart_interrupt.h"
 #include "test.h"
+#include <stdint.h>
 
 
+#define CIRC_BUF_LEN 12
+static uint8_t rx_buf[CIRC_BUF_LEN];
+static uint8_t tx_buf[CIRC_BUF_LEN];
+static uint16_t rx_get_ptr = 0;
+static uint16_t rx_put_ptr = 0;
+static uint16_t tx_get_ptr = 0;
+static uint16_t tx_put_ptr = 0;
 
+void send_char(uint8_t c);
+bool get_char(uint8_t *c);
+// void start_transmission(uint8_t c);
 
 int main(void)
 {
 	// char buffer[100];
 	unsigned char data;
+	// int counter = 0;
 	port_f_initialization();
 	delay(1000000);
 	uart0_interrupt_initialization();
 	delay(1000000);
 	// Global interrupts enabled by default.
 	// __enable_irq();
-	
+
 	// main loop
 	while(1)
 	{
+		
 		//uart0_interrupt_send_char(&tx_ring_buffer, 'a');
 		//uart0_interrupt_send_char(&tx_ring_buffer, 'b');
 		
 		// Check the status of the rx_ring_buffer in a non-blocking way.
 		// If the receive ISR triggered and put data into the rx_ring_buffer,
 		//	send the char to tx_ring_buffer and enable the transmit interrupt.
-		if(uart0_interrupt_get_char(&rx_ring_buffer, &data))
+//		if(uart0_interrupt_get_char(&rx_ring_buffer, &data))
+//		{
+//			uart0_interrupt_send_char(&tx_ring_buffer, data);
+//		}
+		if (get_char(&data))
 		{
-			uart0_interrupt_send_char(&tx_ring_buffer, data);
+				send_char(data);
+		}
+//		if (counter == 1000000)
+//		{
+//			UART0_DR_R = 'Z';
+//		}
+//		
+//		data = 'T';
+//		send_char(data);
+//		counter++;
+		
+	}
+}
+
+void send_char(uint8_t c) {
+		// If no current transmission is going (Tx hardware FIFO is empty)then start it by writing directly to the UART0_DR_R register
+		if (UART0_FR_R & 0x80)
+		{
+			UART0_DR_R = c;
+			uart0_interrupt_enable_transmit();
+		}
+		// If transmission is on going, put it in the tx buffer
+		else
+		{
+			tx_buf[tx_put_ptr++] = c;
+			tx_put_ptr &= (CIRC_BUF_LEN - 1);
+		}
+}
+
+bool get_char(uint8_t *c) {
+    if (rx_get_ptr == rx_put_ptr)
+		{
+        return false;			
+		}
+    *c = rx_buf[rx_get_ptr++];
+    rx_get_ptr &= (CIRC_BUF_LEN - 1);
+
+    return true;
+}
+
+void UART0_Handler(void) {
+	GPIO_PORTF_DATA_R = 0x04;		// set blue LED to confirm ISR is triggered
+	
+	if (UART0_MIS_R & 0x10) { //&& (UART0_FR_R & 0x40)) {
+		GPIO_PORTF_DATA_R = 0x02;		// set red LED to confirm it entered the receive interrupt if statement
+		rx_buf[rx_put_ptr++] = UART0_DR_R & 0xFF;
+		rx_put_ptr &= (CIRC_BUF_LEN - 1);
+	}
+
+	if (UART0_MIS_R & 0x20) { //&& (UART0_FR_R & 0x80)) {
+		GPIO_PORTF_DATA_R ^= 0x08;		// set green LED to confirm it entered the transmit interrupt if statement
+		if (tx_get_ptr != tx_put_ptr) {
+				UART0_DR_R = tx_buf[tx_get_ptr++];
+				tx_get_ptr &= (CIRC_BUF_LEN - 1);
+		} else {
+				uart0_interrupt_disable_transmit();
 		}
 	}
 }
+
 
 /***** Project Notes *****
 // defines.h
