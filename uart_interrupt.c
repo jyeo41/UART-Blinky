@@ -1,5 +1,9 @@
 #include "uart_interrupt.h"
 
+#define NULL 0
+#define TRUE 1
+#define FALSE 0
+
 /***** High Level Interrupts Concept *****/
 // The idea is, enable interrupts in both the peripheral/device, NVIC for that peripherial/device, and global
 //
@@ -28,6 +32,13 @@
 // 3) software ACKNOWLEDGES and CLEARS the active interrupt in the ICR register
 // 4) Steps 2 and 3 keep repeating until the software decides to DISARM the interrupt in the IM register again
 
+/***** Debugging UART 0 Memory Address *****/
+// UART 0 Base Address: 0x4000 C000
+// LCRH:	0x02C
+// IM:		0x038
+// RIS:		0x03C
+// MIS:		0x040
+// FR:		0x018
 
 #define UART_BUFFER_SIZE (16)
 static unsigned long rx_buffer[UART_BUFFER_SIZE];
@@ -111,47 +122,52 @@ void uart0_interrupt_clear_transmit(void)
 }
 
 // UART0 interrupt service routine
-//void UART0_Handler(void)
-//{
-//	volatile unsigned long txim = UART0_MIS_R & 0x20;	// sanity checking interrupt trigger flag
-//	volatile unsigned long rxim = UART0_MIS_R & 0x10;	// sanity checking interrupt trigger flag
-//	GPIO_PORTF_DATA_R = 0x04;		// set blue LED to confirm ISR is triggered
-//	
-//	// Receive interrupt triggered
-//	// If bit is set in the MIS register AND Receive FIFO is full (data has been received and is ready to be read),
-//	// 	put the received data into the rx_ring_buffer
-////	if ((UART0_MIS_R & 0x10) && (UART0_FR_R & 0x40))
-////	{
-////		GPIO_PORTF_DATA_R = 0x02;		// set red LED to confirm it entered the receive interrupt if statement
-////		UART0_DR_R = 'R';						// show 'R' on terminal too
-////		// Acknowledge receive interrupt
-////		uart0_interrupt_clear_receive();
-////		
-////		// Read the data out from the HW RxFIFO and put it into the rx_ring_buffer
-////		// ring_buffer_write(&rx_ring_buffer, UART0_DR_R);
-////	}
-//	// Transmit interrupt triggered
-//	// If interrupt bit is set in the MIS register AND Transmit FIFO is empty (UART is ready to send more data)
-//	if ((UART0_MIS_R & 0x20) && (UART0_FR_R & 0x80))
-//	{
-//		GPIO_PORTF_DATA_R = 0x08;		// set green LED to confirm it entered the transmit interrupt if statement
-//		UART0_DR_R = 'G';						// show 'G' on terminal too
-//		// Acknowledge transmit receive interrupt
-//		uart0_interrupt_clear_transmit();
-//		
-//		// Also check to make sure the tx_ring_buffer has data to be transmitted
-//		if (!ring_buffer_is_empty(&tx_ring_buffer))
-//		{
-//			UART0_DR_R = ring_buffer_read(&tx_ring_buffer);
-//		}
-//		// if it doesn't, then disable the interrupt because if theres no data in the tx_ring_buffer to be sent,
-//		//	the transmit interrupt should never trigger
-//		else
-//		{
-//			uart0_interrupt_disable_transmit();
-//		}
-//	}
-//}
+void UART0_Handler(void)
+{
+	//GPIO_PORTF_DATA_R = 0x04;		// set blue LED to confirm receive interrupt triggered
+	
+	// Receive interrupt triggered
+	// If receive interrupt bit 4 is set in the MIS register, put the received data into the rx_ring_buffer
+	if (UART0_MIS_R & 0x10)
+	{
+		GPIO_PORTF_DATA_R = 0x02;		// set red LED to confirm it entered the receive interrupt if statement
+		
+		// Acknowledge receive interrupt
+		uart0_interrupt_clear_receive();
+		
+		// Keep reading from the hardware receive FIFO as long as its not empty and
+		//	receiver ring buffer is not full
+		while (!(UART0_FR_R & 0x10) && !ring_buffer_is_full(&rx_ring_buffer))
+		{
+			// Read the data out from the HW RxFIFO and put it into the rx_ring_buffer
+			ring_buffer_write(&rx_ring_buffer, UART0_DR_R);
+		}
+
+	}
+	
+	// Transmit interrupt triggered
+	// If transmit interrupt bit 5 is set in the MIS register
+	if (UART0_MIS_R & 0x20)
+	{
+		GPIO_PORTF_DATA_R = 0x08;		// set green LED to confirm transmit interrupt triggered
+		
+		// Acknowledge transmit receive interrupt
+		uart0_interrupt_clear_transmit();
+		
+		// Check to make sure the tx_ring_buffer has data to be transmitted
+		while (!(UART0_FR_R & 0x20) && !ring_buffer_is_empty(&tx_ring_buffer))
+		{
+			UART0_DR_R = ring_buffer_read(&tx_ring_buffer);			
+		}
+
+		// If theres no data in the tx_ring_buffer to be sent then disable the interrupt.
+		// The transmit interrupt should never trigger when there's no data to be transmitted
+		if (ring_buffer_is_empty(&tx_ring_buffer))
+		{
+			uart0_interrupt_disable_transmit();
+		}
+	}
+}
 
 // Function to get a single char from the rx_ring_buffer after the ISR has put data into it.
 // It returns a boolean to call uart0_interrupt_send_char() function afterwards if it was successful.
@@ -170,10 +186,89 @@ bool uart0_interrupt_get_char(struct ring_buffer* rb, unsigned char* c)
 	return true;
 }
 
+
 // Function to place the char from the rx_ring_buffer into the tx_ring_buffer.
 //	Only when there is data in the tx_ring_buffer should transmit interrupts be enabled
+//
+// FEN bit in UART_LCRH_R set to 0 means FIFO disabled with a depth of 1
+// FEN bit in UART_LCRH_R set to 1 means FIFO enabled with a depth 16. 
+// The interrupt's trigger conditions change depending on the FEN bit.
+// Datasheet pages 900-901
 void uart0_interrupt_send_char(struct ring_buffer* rb, unsigned char c)
 {
+	// some terminals expect carriage return '\r' before line-feed '\n' for proper new line.
+	// this seems to happen on putty where if you don't have it, it'll print the characters
+	// on the terminal in a diagonal fashion
 	ring_buffer_write(rb, c);
+	if(c == '\r')
+	{
+		ring_buffer_write(rb, '\n');
+	}
+	
+	// Place char to be echoed into the transmit ring buffer
+
+	
+	// If the transmit FIFO is empty, initiate the transmission by writing a byte directly
+	//	into the transmit FIFO by reading it from the tx_ring_buffer.
+	// This is necessary because for some reason, when the FIFO depth is 1, the datasheet incorrectly states
+	//	the TXRIS flag will trigger when the TxFIFO is empty. After extensive testing, in order to trigger the TXRIS flag
+	//	you still need to write the initial byte into the FIFO to initiate the transmission.
+	if (UART0_FR_R & 0x80)
+	{
+		UART0_DR_R = ring_buffer_read(rb);
+	}
+
+	// Enable transmit interrupts
 	uart0_interrupt_enable_transmit();
+}
+
+void uart0_interrupt_get_string(unsigned char* static_buffer, unsigned long length, unsigned long* ptr, bool* string_complete)
+{
+	unsigned char c;			// used to read in data from the receive FIFO
+	//unsigned long exit_flag = 0;
+
+	// This whole block should only initiate when there is actual data inside of the rx_ring_buffer.
+	// This means the ISR handled the receiver transmission of data from the user and placed it in the rx_ring_buffer.
+	if(!ring_buffer_is_empty(&rx_ring_buffer))
+	{
+		c = ring_buffer_read(&rx_ring_buffer) & 0xFF;			// read in the character
+		uart0_interrupt_send_char(&tx_ring_buffer, c);		// display the character immediately
+		
+		// If the user completed typing a string in the previous iteration, then we should reset the pointer
+		// 	to build the string properly on the next iteration
+		if (*string_complete == true)
+		{
+			*ptr = 0;
+		}
+		
+		// If its a backspace character, in Putty it is sent as 'DEL' which is 0x7F,
+		//	decrement static buffer index so the string isn't destroyed by holding the junk character
+		if (c == 0x7F)
+		{
+			if (*ptr > 0)
+			{
+				(*ptr)--;
+			}
+		}
+		else if ((c != '\n') && (c != '\r'))	// If its a real character add it to the static buffer while checking overflow
+		{
+			if (*ptr < length - 1)	// As long as buffer is not full, put the character
+			{
+				static_buffer[(*ptr)++] = c;
+				*string_complete = false;
+			}
+			else		// If we reached the final index, force null terminate it
+			{
+				static_buffer[*ptr] = '\0';
+				*string_complete = true;
+				//exit_flag = 1;
+			}
+		}
+		else		// If it's a '\r' or '\n' character, terminate the string because the user finished typing it
+		{
+			static_buffer[*ptr] = '\0';
+			*string_complete = true;
+			//exit_flag = 1;
+		}
+	}
 }

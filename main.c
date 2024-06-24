@@ -1,109 +1,46 @@
-// #include "defines.h"
+#include <stdint.h>
+#include <stdbool.h>
 #include "led.h"
-// #include "uart_busy_wait.h"
+#include "uart_busy_wait.h"
 #include "uart_interrupt.h"
 #include "test.h"
-#include <stdint.h>
-
-
-#define CIRC_BUF_LEN 12
-static uint8_t rx_buf[CIRC_BUF_LEN];
-static uint8_t tx_buf[CIRC_BUF_LEN];
-static uint16_t rx_get_ptr = 0;
-static uint16_t rx_put_ptr = 0;
-static uint16_t tx_get_ptr = 0;
-static uint16_t tx_put_ptr = 0;
-
-void send_char(uint8_t c);
-bool get_char(uint8_t *c);
-// void start_transmission(uint8_t c);
 
 int main(void)
 {
-	// char buffer[100];
-	unsigned char data;
-	// int counter = 0;
+	//char buffer[100];
+	unsigned char color[100];
+	unsigned long color_ptr = 0;
+	bool string_complete = false;
 	port_f_initialization();
 	delay(1000000);
 	uart0_interrupt_initialization();
 	delay(1000000);
 	// Global interrupts enabled by default.
-	// __enable_irq();
 
 	// main loop
 	while(1)
 	{
-		
-		//uart0_interrupt_send_char(&tx_ring_buffer, 'a');
-		//uart0_interrupt_send_char(&tx_ring_buffer, 'b');
-		
-		// Check the status of the rx_ring_buffer in a non-blocking way.
-		// If the receive ISR triggered and put data into the rx_ring_buffer,
-		//	send the char to tx_ring_buffer and enable the transmit interrupt.
+		uart0_interrupt_get_string(color, 100, &color_ptr, &string_complete);
+//		// Check the status of the rx_ring_buffer in a non-blocking way.
+//		// If the receive ISR triggered and put data into the rx_ring_buffer,
+//		//	send the char to tx_ring_buffer and enable the transmit interrupt.
 //		if(uart0_interrupt_get_char(&rx_ring_buffer, &data))
 //		{
 //			uart0_interrupt_send_char(&tx_ring_buffer, data);
 //		}
-		if (get_char(&data))
-		{
-				send_char(data);
-		}
-//		if (counter == 1000000)
-//		{
-//			UART0_DR_R = 'Z';
-//		}
-//		
-//		data = 'T';
-//		send_char(data);
-//		counter++;
-		
 	}
-}
-
-void send_char(uint8_t c) {
-		// If no current transmission is going (Tx hardware FIFO is empty)then start it by writing directly to the UART0_DR_R register
-		if (UART0_FR_R & 0x80)
-		{
-			UART0_DR_R = c;
-			uart0_interrupt_enable_transmit();
-		}
-		// If transmission is on going, put it in the tx buffer
-		else
-		{
-			tx_buf[tx_put_ptr++] = c;
-			tx_put_ptr &= (CIRC_BUF_LEN - 1);
-		}
-}
-
-bool get_char(uint8_t *c) {
-    if (rx_get_ptr == rx_put_ptr)
-		{
-        return false;			
-		}
-    *c = rx_buf[rx_get_ptr++];
-    rx_get_ptr &= (CIRC_BUF_LEN - 1);
-
-    return true;
-}
-
-void UART0_Handler(void) {
-	GPIO_PORTF_DATA_R = 0x04;		// set blue LED to confirm ISR is triggered
 	
-	if (UART0_MIS_R & 0x10) { //&& (UART0_FR_R & 0x40)) {
-		GPIO_PORTF_DATA_R = 0x02;		// set red LED to confirm it entered the receive interrupt if statement
-		rx_buf[rx_put_ptr++] = UART0_DR_R & 0xFF;
-		rx_put_ptr &= (CIRC_BUF_LEN - 1);
-	}
+ 	//Code block for functional busy wait UART implementation
 
-	if (UART0_MIS_R & 0x20) { //&& (UART0_FR_R & 0x80)) {
-		GPIO_PORTF_DATA_R ^= 0x08;		// set green LED to confirm it entered the transmit interrupt if statement
-		if (tx_get_ptr != tx_put_ptr) {
-				UART0_DR_R = tx_buf[tx_get_ptr++];
-				tx_get_ptr &= (CIRC_BUF_LEN - 1);
-		} else {
-				uart0_interrupt_disable_transmit();
-		}
-	}
+//	port_f_initialization();
+//	delay(1000000);
+//	uart0_busy_wait_initialization();
+//	delay(1000000);
+//	
+//	while (1)
+//	{
+//		uart0_busy_wait_menu(buffer, 100);
+//	}
 }
 
 
@@ -165,5 +102,21 @@ Solution: Turns out the vector table in the header file is incorrect.
 					It is shown as 21 as well as 21 in the datasheet, however when I inspected the CMSIS files, it showed the UART0 interrupt as interrupt request 5.
 					After modifying the NVIC_EN and NVIC_PRI appropriately to account for IRQ 5 instead of IRQ 21, the ISR triggered successfully.
 
-
+Problem: Transmit interrupt was not triggering even though all the UART initializations were correct and transmit interrupt being enabled in the UART_IM register.
+Solution: Have to directly write a byte into the UART_DR once when the TX FIFO is empty to initialize the transmission 
+					and have the hardware detect and flag the TXRIS bit in RIS register. The bit is actually checked in the MIS register for programming logic.
+					This was the hardest problem to solve because of a combination of weird debugger behaviors, registers not updating while stepping through code (maybe an IDE issue?)
+					and the data sheet being incorrect. The data sheet validity being the biggest offender.
+					When the FIFOs are disabled through clearing the FEN bit in UART_LCRH register, the hardware FIFOs are set to a depth of 1. The datasheet says, when the TX FIFO is empty
+					if FEN bit is cleared, this means its ready to transmit and trigger the transmit interrupt TXRIS. This was false and you still have to write the byte into the UART_DR.
+					I suspect its because when the FIFOs are enabled with a depth of 16, it uses "through level" triggering of the TXRIS. This means you need to keep writing a number of elements
+					until the TX FIFO reaches a certain % filled i.e. 1/8, 1/2, etc. When the through level is hit, it triggers the TXRIS.
+					With a depth of 1, its supposed to trigger each time it is empty, but I think it uses "through level" triggering as well so you have to write the first byte. 
+					Took me many many hours to figure out this problem. I just never suspected the data sheet could be that incorrect.
+					
+Problem: Weird debugger behaviors.
+Solution:	When trying to debug the UART ISR, you HAVE to set a breakpoint inside of the interrupt flag check if statement to confirm it, otherwise if you place the breakpoints
+					anywhere else, such as the beginning of the ISR, the interrupt RXRIS and transmit TXRIS trigger bits don't ever set for some reason.
+					Breakpoint debugging seems to tamper with ISR behavior when stepping through code. It was much easier to just toggle LEDs and test one if statement at a time while
+					letting the code run with no breakpoints to check if the ISR was triggering.
 */
