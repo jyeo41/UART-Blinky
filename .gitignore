@@ -1,4 +1,36 @@
+# Push source files '.c', '.h'
+# Push project configuration file '.uvprojx'
+# Ignore everything else because they're not necessary files to build the project
+
+# Ignore build artifacts
+*.axf
+*.bin
+*.hex
 *.o
+*.d
+*.lst
+*.map
+*.crf
+*.sct
+*.lnp
+*.dep
+
+# Ignore keil specific intermediate files
 Objects/
 Listings/
-blinky.uvguix.Joon
+
+# Ignore user-specific options (optional)
+*.uvoptx
+
+# Ignore Event Recorder files (optional)
+*.scvd
+
+# Ignore GUI configuration files
+*.uvguix.*
+
+# Ignore backup files
+*~
+*.bak
+
+
+

@@ -1,4 +1,5 @@
 #include "led.h"
+#include "test.h"
 //#include "defines.h"
 
 // Port F Initialization Function
@@ -10,9 +11,7 @@
 // PF0 is also locked by default, so we unlock it in the LOCK_R and then CR_R
 void port_f_initialization(void)
 {
-	unsigned long delay;
 	SYSCTL_RCGCGPIO_R |= 0x20u;				// enable clock gating for port f
-	delay = SYSCTL_RCGCGPIO_R;				// delay to let the clock settle
 	GPIO_PORTF_DIR_R |= 0x0Eu;				// PF4 PF0 to input 0, PF3-1 to output 1
 	GPIO_PORTF_AFSEL_R &= ~0x1Fu;			// Disable alternative function
 	GPIO_PORTF_PCTL_R &= ~0x1Fu;			// Clear bits to set as GPIO
@@ -64,4 +63,10 @@ void led_switches(void)
 				}
 			}
 		}
+}
+
+void led_toggle(void)
+{
+	GPIO_PORTF_DATA_R ^= 0x02;
+	delay(1000000);
 }

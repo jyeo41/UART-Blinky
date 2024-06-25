@@ -405,14 +405,14 @@
               <FilePath>.\led.c</FilePath>
             </File>
             <File>
-              <FileName>uart.h</FileName>
+              <FileName>uart_busy_wait.h</FileName>
               <FileType>5</FileType>
-              <FilePath>.\uart.h</FilePath>
+              <FilePath>.\uart_busy_wait.h</FilePath>
             </File>
             <File>
-              <FileName>uart.c</FileName>
+              <FileName>uart_busy_wait.c</FileName>
               <FileType>1</FileType>
-              <FilePath>.\uart.c</FilePath>
+              <FilePath>.\uart_busy_wait.c</FilePath>
             </File>
             <File>
               <FileName>ring_buffer.h</FileName>
@@ -428,6 +428,16 @@
               <FileName>test.c</FileName>
               <FileType>1</FileType>
               <FilePath>.\test.c</FilePath>
+            </File>
+            <File>
+              <FileName>uart_interrupt.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>.\uart_interrupt.h</FilePath>
+            </File>
+            <File>
+              <FileName>uart_interrupt.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\uart_interrupt.c</FilePath>
             </File>
           </Files>
         </Group>

@@ -1,4 +1,4 @@
-#include "uart.h"
+#include "uart_busy_wait.h"
 //#include "defines.h"
 
 #define NULL 0
@@ -11,7 +11,7 @@
 //
 // TODO
 // Look into why setting the system clock did not allow the UART to function properly.
-void uart_0_initialization(void)
+void uart0_busy_wait_initialization(void)
 {
 	unsigned long delay;
 	SYSCTL_RCGCUART_R |= 0x01;		// Enable clock gating for UART0
@@ -49,14 +49,14 @@ void uart_0_initialization(void)
 // yellow		G-R-    0x0A
 // cyan			GB--    0x0C
 // white		GBR-    0x0E
-void uart_busy_wait_menu(char* buffer, unsigned long length)
+void uart0_busy_wait_menu(char* buffer, unsigned long length)
 {
-	busy_wait_write_string("Enter one of the following colors:\n");
-	busy_wait_write_string("Red, Blue, Green, Pink, Yellow, Cyan, White, Black\n");
-	busy_wait_read_string(buffer, length);
-	busy_wait_write_string("Received: ");
-	busy_wait_write_string(buffer);
-	busy_wait_write_string("\n\n");
+	uart0_busy_wait_write_string("Enter one of the following colors:\n");
+	uart0_busy_wait_write_string("Red, Blue, Green, Pink, Yellow, Cyan, White, Black\n");
+	uart0_busy_wait_read_string(buffer, length);
+	uart0_busy_wait_write_string("Received: ");
+	uart0_busy_wait_write_string(buffer);
+	uart0_busy_wait_write_string("\n\n");
 	
 	if(strings_compare_case_insensitive(buffer, "red") == 0)
 	{
@@ -92,21 +92,28 @@ void uart_busy_wait_menu(char* buffer, unsigned long length)
 	}
 }
 
-char busy_wait_read_char(void)
+char uart0_busy_wait_read_char(void)
 {
+	// Keep polling until the UART Receiver FIFO is not empty.
+	// This means there is data to be consumed.
+	// 0 means receive FIFO is not empty
+	// 1 means receive FIFO IS empty
 	while((UART0_FR_R & 0x10) != 0);
 	return UART0_DR_R & 0xFF;
 }
 
-void busy_wait_write_char(char c)
+void uart0_busy_wait_write_char(char c)
 {
 	// some terminals expect carriage return '\r' before line-feed '\n' for proper new line.
 	// this seems to happen on putty where if you don't have it, it'll print the characters
 	// on the terminal in a diagonal fashion
 	if(c == '\n')
 	{
-		busy_wait_write_char('\r');
+		uart0_busy_wait_write_char('\r');
 	}
+	
+	// Keep polling until the UART Transmit FIFO is not full.
+	// This means there is data to be sent.
 	while ((UART0_FR_R & 0x20) != 0);
 	UART0_DR_R = c;
 }
@@ -115,7 +122,7 @@ void busy_wait_write_char(char c)
 // Need to use && check in if(c != '\n' && c != '\r') because || would always evaluate to true.
 // if c == '\n' then c != '\r' would be true so the statement would be true with || and vice versa.
 // if c is any other character, it would also evalulate to true, therefore the condition is always true.
-void busy_wait_read_string(char* buffer, unsigned long length)
+void uart0_busy_wait_read_string(char* buffer, unsigned long length)
 {
 	unsigned long i = 0;	// used to iterate through the incoming buffer array
 	unsigned char c;			// used to read in data from the receive FIFO
@@ -123,8 +130,8 @@ void busy_wait_read_string(char* buffer, unsigned long length)
 
 	while(exit_flag == FALSE)
 	{
-		c = busy_wait_read_char();	// read in the character
-		busy_wait_write_char(c);		// display the character immediately
+		c = uart0_busy_wait_read_char();	// read in the character
+		uart0_busy_wait_write_char(c);		// display the character immediately
 		
 		// IMPORTANT check for 'DEL' or '\b' character so the buffer doesn't get flooded with backspace characters
 		// and destroy the string written in the buffer. Decrementing the buffer index also "deletes" the character
@@ -153,7 +160,7 @@ void busy_wait_read_string(char* buffer, unsigned long length)
 	}
 }
 
-void busy_wait_write_string(char* string)
+void uart0_busy_wait_write_string(char* string)
 {
 	if (string == NULL)
 	{
@@ -163,7 +170,7 @@ void busy_wait_write_string(char* string)
 	// print the string a character at a time until it reaches the null terminator '\0'
 	while(*string)
 	{
-		busy_wait_write_char(*string);
+		uart0_busy_wait_write_char(*string);
 		string++;
 	}
 }
