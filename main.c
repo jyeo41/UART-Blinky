@@ -21,28 +21,7 @@ int main(void)
 	while(1)
 	{
 		uart0_interrupt_get_string(color, 100, &color_ptr, &string_complete);
-//		// Check the status of the rx_ring_buffer in a non-blocking way.
-//		// If the receive ISR triggered and put data into the rx_ring_buffer,
-//		//	send the char to tx_ring_buffer and enable the transmit interrupt.
-//		if(uart0_interrupt_get_char(&rx_ring_buffer, &data))
-//		{
-//			uart0_interrupt_send_char(&tx_ring_buffer, data);
-//		}
 	}
-
-
-	
- 	//Code block for functional busy wait UART implementation
-
-//	port_f_initialization();
-//	delay(1000000);
-//	uart0_busy_wait_initialization();
-//	delay(1000000);
-//	
-//	while (1)
-//	{
-//		uart0_busy_wait_menu(buffer, 100);
-//	}
 }
 
 
@@ -120,5 +99,7 @@ Problem: Weird debugger behaviors.
 Solution:	When trying to debug the UART ISR, you HAVE to set a breakpoint inside of the interrupt flag check if statement to confirm it, otherwise if you place the breakpoints
 					anywhere else, such as the beginning of the ISR, the interrupt RXRIS and transmit TXRIS trigger bits don't ever set for some reason.
 					Breakpoint debugging seems to tamper with ISR behavior when stepping through code. It was much easier to just toggle LEDs and test one if statement at a time while
-					letting the code run with no breakpoints to check if the ISR was triggering.
+					letting the code run with no breakpoints to check if the ISR was triggering. The debugger i'm using is the Stellaris ICDI thats on the launchpad. 
+					I suspect the weird ISR behavior is because UART0 is directly connected to the debugger. The ICDI uses UART0 for serial communication but now that I have
+					configured it for my program's use, its interfering with it.
 */

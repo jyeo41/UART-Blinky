@@ -1,3 +1,9 @@
+// *** PURPOSE
+// uart_busy_wait was a stepping stone uart driver file to make sure the uart port 0
+// was working properly because busy-wait is easy to implement. The goal was to use this
+// to get a better understanding of serial transmission and then implement interrupts to improve
+// the efficiency of the code.
+
 #ifndef UART_BUSY_WAIT_H
 #define UART_BUSY_WAIT_H
 

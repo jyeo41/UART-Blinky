@@ -86,17 +86,9 @@ void uart0_interrupt_initialization(void)
 	UART0_CTL_R |= 0x301; 				// Enable UART by setting the UARTEN bit 0, bit [9:8] for transmit/receive, Enable Tx and Rx bits
 	
 	// Enable interrupts for UART specific
-	UART0_IM_R |= 0x10;						// Enable receive interrupts bit 4
-	// UART0_IM_R |= 0x20;						// Enable transmit interrupts bit 4
-																													
+	UART0_IM_R |= 0x10;																			// Enable receive interrupts, bit 4
   NVIC_EN0_R |= 1 << 5;           												// Enable IRQ 5 (UART0), tried it with IRQ21 and didn't work but setting it to 5 does work
   NVIC_PRI1_R = (NVIC_PRI1_R & 0xFFFF00FF) | (2 << 13); 	// Set priority to 2
-	
-	// NVIC_EN0_R |= (1 << 21);															// UART0 is interrupt 21, NVIC_EN0 is for interrupts 0-31, PRI5 is for 20-23
-	// NVIC_PRI5_R = (NVIC_PRI5_R & 0xFFFF0FFF) | 0x4000;		// Masking with 0xFFFF0FFF first to clear any previously set priority, and not touch other bits
-																													// 0x4000 puts 010 in bits [15:13] interrupt priority
-	//NVIC_EnableIRQ(UART0_IRQn);
-	//NVIC_SetPriority(UART0_IRQn, 2);
 }
 
 // Function to enable transmit interrupt
@@ -122,6 +114,8 @@ void uart0_interrupt_clear_transmit(void)
 }
 
 // UART0 interrupt service routine
+// Technically don't need to clear interrupts because datasheet specifies they auto clear
+//	when reading from or writing to the UART_DR. It's still good practice to do so 
 void UART0_Handler(void)
 {
 	//GPIO_PORTF_DATA_R = 0x04;		// set blue LED to confirm receive interrupt triggered
@@ -173,6 +167,8 @@ void UART0_Handler(void)
 // It returns a boolean to call uart0_interrupt_send_char() function afterwards if it was successful.
 // This is because the send_char() function should only write data to tx_ring_buffer if data was received.
 //	The transmit interrupt should also only be enabled when the tx_ring_buffer has data in it.
+//
+// Ended up being a test function instead to check the ISR was correctly placing received bytes into the rx_ring_buffer
 bool uart0_interrupt_get_char(struct ring_buffer* rb, unsigned char* c)
 {
 	if (ring_buffer_is_empty(rb))
@@ -222,6 +218,18 @@ void uart0_interrupt_send_char(struct ring_buffer* rb, unsigned char c)
 	uart0_interrupt_enable_transmit();
 }
 
+// Driver level function to properly extract the color string i.e. "red", "blue", "green", etc the user types into to be later
+//	called by an application level function to check the color. Decided to separate out the functions compared to the big menu
+//	function in the uart_busy_wait.c file for easier testing and improved code structure
+//
+// Variables:
+// static buffer = the buffer used to store the correctly extracted color string
+// length = the length of the static buffer
+// ptr = index of the static buffer to correctly "build" the string using index logic
+//	to account for '\n', '\r', and most important the 'DEL' or backspace
+// string_complete = flag to check whether the string has been successfully built after user hits enter. This function is called
+//	non-blocking without using a loop, so it needs to know when to reset the buffer ptr back to 0 so the buffer doesn't hold
+// 	multiple colors inside of it and rebuilds the string starting from the 0 index
 void uart0_interrupt_get_string(unsigned char* static_buffer, unsigned long length, unsigned long* ptr, bool* string_complete)
 {
 	unsigned char c;			// used to read in character from rx_ring_buffer
@@ -234,7 +242,7 @@ void uart0_interrupt_get_string(unsigned char* static_buffer, unsigned long leng
 		uart0_interrupt_send_char(&tx_ring_buffer, c);		// display the character immediately
 		
 		// If the user completed typing a string in the previous iteration, then we should reset the pointer
-		// 	to build the string properly on the next iteration
+		// 	to build the string properly on the next iteration starting from the beginning of the buffer
 		if (*string_complete == true)
 		{
 			*ptr = 0;
@@ -251,7 +259,7 @@ void uart0_interrupt_get_string(unsigned char* static_buffer, unsigned long leng
 		}
 		else if ((c != '\n') && (c != '\r'))	// If its a real character add it to the static buffer while checking overflow
 		{
-			if (*ptr < length - 1)	// As long as buffer is not full, put the character
+			if (*ptr < length - 1)	// As long as buffer is not full, put the character in we should continue to build the string
 			{
 				static_buffer[(*ptr)++] = c;
 				*string_complete = false;
