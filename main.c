@@ -8,9 +8,9 @@
 int main(void)
 {
 	//char buffer[100];
-	unsigned char color[100];
-	unsigned long color_ptr = 0;
-	bool string_complete = false;
+	unsigned char color[100];			// static buffer to hold color strings such as "red", "blue", etc
+	unsigned long color_ptr = 0;	// pointer to keep track of the color buffer to "build" the string properly
+	bool string_complete = false;	// flag to check if string was completely built after user hit enter, used to reset color_ptr
 	port_f_initialization();
 	delay(1000000);
 	uart0_interrupt_initialization();
@@ -29,6 +29,8 @@ int main(void)
 //			uart0_interrupt_send_char(&tx_ring_buffer, data);
 //		}
 	}
+
+
 	
  	//Code block for functional busy wait UART implementation
 

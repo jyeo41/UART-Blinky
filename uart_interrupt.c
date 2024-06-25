@@ -224,8 +224,7 @@ void uart0_interrupt_send_char(struct ring_buffer* rb, unsigned char c)
 
 void uart0_interrupt_get_string(unsigned char* static_buffer, unsigned long length, unsigned long* ptr, bool* string_complete)
 {
-	unsigned char c;			// used to read in data from the receive FIFO
-	//unsigned long exit_flag = 0;
+	unsigned char c;			// used to read in character from rx_ring_buffer
 
 	// This whole block should only initiate when there is actual data inside of the rx_ring_buffer.
 	// This means the ISR handled the receiver transmission of data from the user and placed it in the rx_ring_buffer.
@@ -261,14 +260,12 @@ void uart0_interrupt_get_string(unsigned char* static_buffer, unsigned long leng
 			{
 				static_buffer[*ptr] = '\0';
 				*string_complete = true;
-				//exit_flag = 1;
 			}
 		}
 		else		// If it's a '\r' or '\n' character, terminate the string because the user finished typing it
 		{
 			static_buffer[*ptr] = '\0';
 			*string_complete = true;
-			//exit_flag = 1;
 		}
 	}
 }
