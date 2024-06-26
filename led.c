@@ -1,6 +1,6 @@
 #include "led.h"
 #include "test.h"
-//#include "defines.h"
+#include "systick.h"
 
 // Port F Initialization Function
 // The steps to initialize were followed through using the datasheet section 10.3
@@ -12,6 +12,7 @@
 void port_f_initialization(void)
 {
 	SYSCTL_RCGCGPIO_R |= 0x20u;				// enable clock gating for port f
+	systick_wait_5ms(1);
 	GPIO_PORTF_DIR_R |= 0x0Eu;				// PF4 PF0 to input 0, PF3-1 to output 1
 	GPIO_PORTF_AFSEL_R &= ~0x1Fu;			// Disable alternative function
 	GPIO_PORTF_PCTL_R &= ~0x1Fu;			// Clear bits to set as GPIO

@@ -3,6 +3,7 @@
 #include "led.h"
 #include "uart_busy_wait.h"
 #include "uart_interrupt.h"
+#include "systick.h"
 #include "test.h"
 
 int main(void)
@@ -11,10 +12,9 @@ int main(void)
 	unsigned char color[100];			// static buffer to hold color strings such as "red", "blue", etc
 	unsigned long color_ptr = 0;	// pointer to keep track of the color buffer to "build" the string properly
 	bool string_complete = false;	// flag to check if string was completely built after user hit enter, used to reset color_ptr
+	systick_initialization();
 	port_f_initialization();
-	delay(1000000);
 	uart0_interrupt_initialization();
-	delay(1000000);
 	// Global interrupts enabled by default.
 
 	// main loop
