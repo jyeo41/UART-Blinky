@@ -1,10 +1,9 @@
-#include "tm4c123gh6pm.h"
 #include "test.h"
-#include "ring_buffer.h"
 
 // Test functions
 
 // Simple delay function just to quickly test certain functions
+// Replaced by systick delay function
 void delay(unsigned long delay)
 {
 	unsigned long i;
@@ -62,4 +61,3 @@ void test_ring_buffer(void)
 		delay(1000000);
 	}
 }
-

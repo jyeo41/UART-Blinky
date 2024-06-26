@@ -1,4 +1,5 @@
 #include "uart_interrupt.h"
+#include "systick.h"
 
 #define NULL 0
 #define TRUE 1
@@ -66,7 +67,9 @@ struct ring_buffer tx_ring_buffer =
 void uart0_interrupt_initialization(void)
 {
 	SYSCTL_RCGCUART_R |= 0x01;		// Enable clock gating for UART0
+	systick_wait_5ms(1);
 	SYSCTL_RCGCGPIO_R |= 0x01;		// Enable clock gating for Port A
+	systick_wait_5ms(1);
 	GPIO_PORTA_AFSEL_R = 0x03;		// Alternate function enabled because UART
 	GPIO_PORTA_PCTL_R |= 0x11;		// 4 bit wide PMCs, setting PMC0 and PMC1 according to page 1351
 	GPIO_PORTA_DEN_R |= 0x03;			// Enable digital on PA1-0
