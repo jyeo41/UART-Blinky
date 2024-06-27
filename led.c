@@ -30,7 +30,7 @@ void port_f_initialization(void)
 // red      --R-    0x02
 // blue     -B--    0x04
 // green    G---    0x08
-// pink			-BR-    0x05
+// pink			-BR-    0x06
 // yellow		G-R-    0x0A
 // cyan			GB--    0x0C
 // white		GBR-    0x0E

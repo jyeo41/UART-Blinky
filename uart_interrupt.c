@@ -127,7 +127,7 @@ void UART0_Handler(void)
 	// If receive interrupt bit 4 is set in the MIS register, put the received data into the rx_ring_buffer
 	if (UART0_MIS_R & 0x10)
 	{
-		GPIO_PORTF_DATA_R = 0x02;		// set red LED to confirm it entered the receive interrupt if statement
+		// GPIO_PORTF_DATA_R = 0x02;		// set red LED to confirm it entered the receive interrupt if statement
 		
 		// Acknowledge receive interrupt
 		uart0_interrupt_clear_receive();
@@ -146,7 +146,7 @@ void UART0_Handler(void)
 	// If transmit interrupt bit 5 is set in the MIS register
 	if (UART0_MIS_R & 0x20)
 	{
-		GPIO_PORTF_DATA_R = 0x08;		// set green LED to confirm transmit interrupt triggered
+		// GPIO_PORTF_DATA_R = 0x08;		// set green LED to confirm transmit interrupt triggered
 		
 		// Acknowledge transmit receive interrupt
 		uart0_interrupt_clear_transmit();
@@ -233,7 +233,7 @@ void uart0_interrupt_send_char(struct ring_buffer* rb, unsigned char c)
 // string_complete = flag to check whether the string has been successfully built after user hits enter. This function is called
 //	non-blocking without using a loop, so it needs to know when to reset the buffer ptr back to 0 so the buffer doesn't hold
 // 	multiple colors inside of it and rebuilds the string starting from the 0 index
-void uart0_interrupt_get_string(unsigned char* static_buffer, unsigned long length, unsigned long* ptr, bool* string_complete)
+void uart0_interrupt_get_string(char* static_buffer, unsigned long length, unsigned long* ptr, bool* string_complete)
 {
 	unsigned char c;			// used to read in character from rx_ring_buffer
 
@@ -243,13 +243,6 @@ void uart0_interrupt_get_string(unsigned char* static_buffer, unsigned long leng
 	{
 		c = ring_buffer_read(&rx_ring_buffer) & 0xFF;			// read in the character
 		uart0_interrupt_send_char(&tx_ring_buffer, c);		// display the character immediately
-		
-		// If the user completed typing a string in the previous iteration, then we should reset the pointer
-		// 	to build the string properly on the next iteration starting from the beginning of the buffer
-		if (*string_complete == true)
-		{
-			*ptr = 0;
-		}
 		
 		// If its a backspace character, in Putty it is sent as 'DEL' which is 0x7F,
 		//	decrement static buffer index so the string isn't destroyed by holding the junk character
