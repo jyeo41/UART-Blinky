@@ -1,17 +1,18 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include "led.h"
-#include "uart_busy_wait.h"
 #include "uart_interrupt.h"
 #include "systick.h"
 #include "test.h"
+#include "colors.h"
 
 int main(void)
 {
 	//char buffer[100];
-	unsigned char color[100];			// static buffer to hold color strings such as "red", "blue", etc
+	char color[100];			// static buffer to hold color strings such as "red", "blue", etc
 	unsigned long color_ptr = 0;	// pointer to keep track of the color buffer to "build" the string properly
 	bool string_complete = false;	// flag to check if string was completely built after user hit enter, used to reset color_ptr
+	Colors led_color;
 	systick_initialization();
 	port_f_initialization();
 	uart0_interrupt_initialization();
@@ -20,7 +21,10 @@ int main(void)
 	// main loop
 	while(1)
 	{
-		uart0_interrupt_get_string(color, 100, &color_ptr, &string_complete);
+		led_color = get_color(color, 100, &color_ptr, &string_complete);
+		led_turn_on_color(led_color);
+
+		// uart0_interrupt_get_string(color, 100, &color_ptr, &string_complete);
 	}
 }
 
