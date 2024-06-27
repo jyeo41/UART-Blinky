@@ -21,8 +21,10 @@ typedef enum Colors
 	BLACK
 } Colors;
 
-Colors get_color(char* static_buffer, unsigned long length, unsigned long* ptr, bool* string_complete);
+Colors get_color(char* static_buffer, unsigned long length, unsigned long* ptr, volatile bool* string_complete);
 void led_turn_on_color(Colors led_color);
 bool strings_compare_colors_case_insensitive(const char* string_1, const char* string_2);
+void print_request_color(const char* string);
+void clear_line(void);
 #endif	// COLORS_H
 

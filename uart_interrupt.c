@@ -41,7 +41,7 @@
 // MIS:		0x040
 // FR:		0x018
 
-#define UART_BUFFER_SIZE (16)
+#define UART_BUFFER_SIZE (128)
 static unsigned long rx_buffer[UART_BUFFER_SIZE];
 static unsigned long tx_buffer[UART_BUFFER_SIZE];
 
@@ -199,9 +199,9 @@ void uart0_interrupt_send_char(struct ring_buffer* rb, unsigned char c)
 	// this seems to happen on putty where if you don't have it, it'll print the characters
 	// on the terminal in a diagonal fashion
 	ring_buffer_write(rb, c);
-	if(c == '\r')
+	if(c == '\n')
 	{
-		ring_buffer_write(rb, '\n');
+		ring_buffer_write(rb, '\r');
 	}
 	
 	// Place char to be echoed into the transmit ring buffer
@@ -233,7 +233,7 @@ void uart0_interrupt_send_char(struct ring_buffer* rb, unsigned char c)
 // string_complete = flag to check whether the string has been successfully built after user hits enter. This function is called
 //	non-blocking without using a loop, so it needs to know when to reset the buffer ptr back to 0 so the buffer doesn't hold
 // 	multiple colors inside of it and rebuilds the string starting from the 0 index
-void uart0_interrupt_get_string(char* static_buffer, unsigned long length, unsigned long* ptr, bool* string_complete)
+void uart0_interrupt_get_string(char* static_buffer, unsigned long length, unsigned long* ptr, volatile bool* string_complete)
 {
 	unsigned char c;			// used to read in character from rx_ring_buffer
 
@@ -273,3 +273,4 @@ void uart0_interrupt_get_string(char* static_buffer, unsigned long length, unsig
 		}
 	}
 }
+

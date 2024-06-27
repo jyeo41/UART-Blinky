@@ -61,3 +61,16 @@ void test_ring_buffer(void)
 		delay(1000000);
 	}
 }
+
+// Test function to check whether the systick wait is functioning properly.
+void test_systick_wait(void)
+{
+	GPIO_PORTF_DATA_R ^= 0x02;
+	systick_wait_5ms(1);
+}
+
+void test_print_request_color(void)
+{
+	print_request_color("Hello World\r\n");
+	systick_wait_5ms(20);
+}

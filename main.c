@@ -6,28 +6,40 @@
 #include "test.h"
 #include "colors.h"
 
+void print_request_color(const char* string);
+
 int main(void)
 {
 	//char buffer[100];
 	char color[100];			// static buffer to hold color strings such as "red", "blue", etc
 	unsigned long color_ptr = 0;	// pointer to keep track of the color buffer to "build" the string properly
-	bool string_complete = false;	// flag to check if string was completely built after user hit enter, used to reset color_ptr
+	volatile bool string_complete = false;	// flag to check if string was completely built after user hit enter, used to reset color_ptr
 	Colors led_color;
 	systick_initialization();
 	port_f_initialization();
 	uart0_interrupt_initialization();
+	systick_wait_5ms(5);
 	// Global interrupts enabled by default.
 
 	// main loop
 	while(1)
 	{
+		print_request_color("Enter one of the following colors:\n");
+		print_request_color("Red, Blue, Green, Pink, Yellow, Cyan, White, Black\n");
 		led_color = get_color(color, 100, &color_ptr, &string_complete);
+		print_request_color("Received:\n");
+		if (led_color == NO_COLOR)
+		{
+			print_request_color("Invalid color!");
+		}
+		else
+		{
+			print_request_color(color);
+		}
+		print_request_color("\n\n");
 		led_turn_on_color(led_color);
-
-		// uart0_interrupt_get_string(color, 100, &color_ptr, &string_complete);
 	}
 }
-
 
 /***** Project Notes *****
 // defines.h
