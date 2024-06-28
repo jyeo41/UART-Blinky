@@ -41,11 +41,7 @@
 // MIS:		0x040
 // FR:		0x018
 
-<<<<<<< HEAD
 #define UART_BUFFER_SIZE (150)	// Need a big enough buffer size to be able to handle overflow
-=======
-#define UART_BUFFER_SIZE (140)	// Need a big enough buffer size to be able to handle overflow
->>>>>>> 37c9c20 (bug(prompt_menu): Fix menu prompts by showing user input in full)
 static unsigned long rx_buffer[UART_BUFFER_SIZE];
 static unsigned long tx_buffer[UART_BUFFER_SIZE];
 
