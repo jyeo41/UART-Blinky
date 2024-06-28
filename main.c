@@ -1,3 +1,15 @@
+// ***** UART Blinky *****
+// The function of the project is to connect an MCU with the PC using a UART to USB converter.
+// The user will be able to type color coded strings ("red", "blue", etc) into a serial terminal such as Putty.
+// The corresponding LED color will turn on the microcontroller.
+//
+// Runs on TM4C123
+// June 18, 2024
+// Joon Yeo
+
+// The file module "uart_busy_wait" was a building block module to test to configure UART using a simple busy-wait solution to confirm
+//	it works and communicates with the PC. The final build of the project uses the "uart_interrupt" in conjunction
+//	with the "colors" module for improved code organization.
 #include <stdint.h>
 #include <stdbool.h>
 #include "led.h"
@@ -6,9 +18,10 @@
 #include "test.h"
 #include "colors.h"
 
+void print_request_color(const char* string);
+
 int main(void)
 {
-	//char buffer[100];
 	char color[100];			// static buffer to hold color strings such as "red", "blue", etc
 	unsigned long color_ptr = 0;	// pointer to keep track of the color buffer to "build" the string properly
 	bool string_complete = false;	// flag to check if string was completely built after user hit enter, used to reset color_ptr
@@ -16,18 +29,30 @@ int main(void)
 	systick_initialization();
 	port_f_initialization();
 	uart0_interrupt_initialization();
+	systick_wait_5ms(5);	// necessary to let the uart configuration settle before printing characters on the terminal otherwise, junk characters
 	// Global interrupts enabled by default.
 
 	// main loop
 	while(1)
 	{
+		//test_uart0_interrupt_send_string();
+		uart0_interrupt_send_string("Enter one of the following colors:\n");
+		uart0_interrupt_send_string("Red, Blue, Green, Pink, Yellow, Cyan, White, Black\n");
 		led_color = get_color(color, 100, &color_ptr, &string_complete);
+		uart0_interrupt_send_string("\nReceived: ");
+		if (led_color == NO_COLOR)
+		{
+			uart0_interrupt_send_string("Invalid color! Turning off the LED.");
+		}
+		else
+		{
+			uart0_interrupt_send_string("Valid color! Turning on the LED.");
+		}
+		uart0_interrupt_send_string("\n\n");
 		led_turn_on_color(led_color);
-
-		// uart0_interrupt_get_string(color, 100, &color_ptr, &string_complete);
+		// test_systick_wait();
 	}
 }
-
 
 /***** Project Notes *****
 // defines.h
