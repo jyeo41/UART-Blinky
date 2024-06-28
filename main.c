@@ -1,3 +1,15 @@
+// ***** UART Blinky *****
+// The function of the project is to connect an MCU with the PC using a UART to USB converter.
+// The user will be able to type color coded strings ("red", "blue", etc) into a serial terminal such as Putty.
+// The corresponding LED color will turn on the microcontroller.
+//
+// Runs on TM4C123
+// June 18, 2024
+// Joon Yeo
+
+// The file module "uart_busy_wait" was a building block module to test to configure UART using a simple busy-wait solution to confirm
+//	it works and communicates with the PC. The final build of the project uses the "uart_interrupt" in conjunction
+//	with the "colors" module for improved code organization.
 #include <stdint.h>
 #include <stdbool.h>
 #include "led.h"
@@ -17,7 +29,7 @@ int main(void)
 	systick_initialization();
 	port_f_initialization();
 	uart0_interrupt_initialization();
-	systick_wait_5ms(5);
+	systick_wait_5ms(5);	// necessary to let the uart configuration settle before printing characters on the terminal otherwise, junk characters
 	// Global interrupts enabled by default.
 
 	// main loop
