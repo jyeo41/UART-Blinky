@@ -1,7 +1,7 @@
 #include "colors.h"
 
 
-Colors get_color(char* static_buffer, unsigned long length, unsigned long* ptr, volatile bool* string_complete)
+Colors get_color(char* static_buffer, unsigned long length, unsigned long* ptr, bool* string_complete)
 {
 	// Check if we are building a new string.
 	if (*string_complete)
@@ -158,30 +158,4 @@ bool strings_compare_colors_case_insensitive(const char* string_1, const char* s
 	// if all of the checks pass, then they are the same string so return 0
 	// busy_wait_write_string("Strings are equal.\n");
 	return true;
-}
-
-void print_request_color(const char* string)
-{
-//	const char* color_string = string;
-//	if (color == NO_COLOR)
-//	{
-//		color_string = "Error: Invalid color\r\n"; 
-//	}
-	while (*string)
-	{
-		uart0_interrupt_send_char(&tx_ring_buffer, *string);
-		string++;
-	}
-}
-
-
-void clear_line(void)
-{
-	uart0_interrupt_send_char(&tx_ring_buffer, '\r');      // Move cursor to start of line
-	for (uint8_t i = 0; i < 100; i++)
-	{
-		uart0_interrupt_send_char(&tx_ring_buffer, ' ');
-	}
-	
-	uart0_interrupt_send_char(&tx_ring_buffer, '\r');      // Move cursor to start of line again
 }

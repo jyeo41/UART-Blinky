@@ -11,4 +11,5 @@ void delay(unsigned long delay);
 void test_ring_buffer(void);
 void test_systick_wait(void);
 void test_print_request_color(void);
+void test_uart0_interrupt_send_string(void);
 #endif	// TEST_H

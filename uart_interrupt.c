@@ -41,7 +41,7 @@
 // MIS:		0x040
 // FR:		0x018
 
-#define UART_BUFFER_SIZE (128)
+#define UART_BUFFER_SIZE (150)	// Need a big enough buffer size to be able to handle overflow
 static unsigned long rx_buffer[UART_BUFFER_SIZE];
 static unsigned long tx_buffer[UART_BUFFER_SIZE];
 
@@ -149,12 +149,12 @@ void UART0_Handler(void)
 		// GPIO_PORTF_DATA_R = 0x08;		// set green LED to confirm transmit interrupt triggered
 		
 		// Acknowledge transmit receive interrupt
-		uart0_interrupt_clear_transmit();
+		// uart0_interrupt_clear_transmit();
 		
 		// Check to make sure the tx_ring_buffer has data to be transmitted
-		while (!(UART0_FR_R & 0x20) && !ring_buffer_is_empty(&tx_ring_buffer))
+		while ((UART0_FR_R & 0x80) && !ring_buffer_is_empty(&tx_ring_buffer))
 		{
-			UART0_DR_R = ring_buffer_read(&tx_ring_buffer);			
+			UART0_DR_R = ring_buffer_read(&tx_ring_buffer);						
 		}
 
 		// If theres no data in the tx_ring_buffer to be sent then disable the interrupt.
@@ -195,14 +195,15 @@ bool uart0_interrupt_get_char(struct ring_buffer* rb, unsigned char* c)
 // Datasheet pages 900-901
 void uart0_interrupt_send_char(struct ring_buffer* rb, unsigned char c)
 {
+	uart0_interrupt_disable_transmit();
 	// some terminals expect carriage return '\r' before line-feed '\n' for proper new line.
 	// this seems to happen on putty where if you don't have it, it'll print the characters
 	// on the terminal in a diagonal fashion
-	ring_buffer_write(rb, c);
 	if(c == '\n')
 	{
 		ring_buffer_write(rb, '\r');
 	}
+	ring_buffer_write(rb, c);
 	
 	// Place char to be echoed into the transmit ring buffer
 
@@ -233,7 +234,7 @@ void uart0_interrupt_send_char(struct ring_buffer* rb, unsigned char c)
 // string_complete = flag to check whether the string has been successfully built after user hits enter. This function is called
 //	non-blocking without using a loop, so it needs to know when to reset the buffer ptr back to 0 so the buffer doesn't hold
 // 	multiple colors inside of it and rebuilds the string starting from the 0 index
-void uart0_interrupt_get_string(char* static_buffer, unsigned long length, unsigned long* ptr, volatile bool* string_complete)
+void uart0_interrupt_get_string(char* static_buffer, unsigned long length, unsigned long* ptr, bool* string_complete)
 {
 	unsigned char c;			// used to read in character from rx_ring_buffer
 
@@ -274,3 +275,27 @@ void uart0_interrupt_get_string(char* static_buffer, unsigned long length, unsig
 	}
 }
 
+// Function to send strings over UART
+void uart0_interrupt_send_string(const char* string)
+{	
+	// Keep looping until the '\0'
+	while (*string)
+	{
+		// Some terminals expect carriage return '\r' before line-feed '\n' for proper new line.
+		// This seems to happen on putty where if you don't have it, it'll print the characters
+		// 	on the terminal in a diagonal fashion
+		if(*string == '\n')
+		{
+			ring_buffer_write(&tx_ring_buffer, '\r');
+		}
+		ring_buffer_write(&tx_ring_buffer, *string);
+		// If the TX FIFO is empty AND the ISR doesn't "own" the ring buffer, start the transmission by writing a byte to the UART_DR_R.
+		// If the transmission is enabled, then the ISR "owns" UART_DR_R, we have to treat it like its utilizing it. 
+		if ((UART0_FR_R & 0x80) && !(UART0_IM_R & 0x20))
+		{
+			UART0_DR_R = ring_buffer_read(&tx_ring_buffer);
+			uart0_interrupt_enable_transmit();
+		}
+		string++;
+	}
+}

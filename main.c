@@ -10,10 +10,9 @@ void print_request_color(const char* string);
 
 int main(void)
 {
-	//char buffer[100];
 	char color[100];			// static buffer to hold color strings such as "red", "blue", etc
 	unsigned long color_ptr = 0;	// pointer to keep track of the color buffer to "build" the string properly
-	volatile bool string_complete = false;	// flag to check if string was completely built after user hit enter, used to reset color_ptr
+	bool string_complete = false;	// flag to check if string was completely built after user hit enter, used to reset color_ptr
 	Colors led_color;
 	systick_initialization();
 	port_f_initialization();
@@ -24,20 +23,22 @@ int main(void)
 	// main loop
 	while(1)
 	{
-		print_request_color("Enter one of the following colors:\n");
-		print_request_color("Red, Blue, Green, Pink, Yellow, Cyan, White, Black\n");
+		//test_uart0_interrupt_send_string();
+		uart0_interrupt_send_string("Enter one of the following colors:\n");
+		uart0_interrupt_send_string("Red, Blue, Green, Pink, Yellow, Cyan, White, Black\n");
 		led_color = get_color(color, 100, &color_ptr, &string_complete);
-		print_request_color("Received:\n");
+		uart0_interrupt_send_string("\nReceived: ");
 		if (led_color == NO_COLOR)
 		{
-			print_request_color("Invalid color!");
+			uart0_interrupt_send_string("Invalid color! Turning off the LED.");
 		}
 		else
 		{
-			print_request_color(color);
+			uart0_interrupt_send_string("Valid color! Turning on the LED.");
 		}
-		print_request_color("\n\n");
+		uart0_interrupt_send_string("\n\n");
 		led_turn_on_color(led_color);
+		// test_systick_wait();
 	}
 }
 

@@ -69,8 +69,9 @@ void test_systick_wait(void)
 	systick_wait_5ms(1);
 }
 
-void test_print_request_color(void)
+void test_uart0_interrupt_send_string(void)
 {
-	print_request_color("Hello World\r\n");
-	systick_wait_5ms(20);
+	uart0_interrupt_send_string("Enter one of the following colors:\n");
+	uart0_interrupt_send_string("Red, Blue, Green, Pink, Yellow, Cyan, White, Black\n");
+	systick_wait_5ms(50);
 }
