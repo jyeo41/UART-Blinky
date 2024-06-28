@@ -8,6 +8,6 @@ Extensive and detailed comments have been documented throughout the project. In 
 Testing and debugging was done through Stellaris ICDI, using LEDs throughout functions, and stepping through code using breakpoints and the debugger. Some test functions were also implemented inside of the test.c file.
 
 # Build
-IDE: Keil Microvision5
-MCU: TM4C123 (TM4C123GXL specifically)
-Terminal: Putty
+IDE: Keil Microvision5  
+MCU: TM4C123 (TM4C123GXL specifically)  
+Terminal: Putty  
