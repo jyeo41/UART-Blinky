@@ -41,7 +41,11 @@
 // MIS:		0x040
 // FR:		0x018
 
+<<<<<<< HEAD
 #define UART_BUFFER_SIZE (150)	// Need a big enough buffer size to be able to handle overflow
+=======
+#define UART_BUFFER_SIZE (140)	// Need a big enough buffer size to be able to handle overflow
+>>>>>>> 37c9c20 (bug(prompt_menu): Fix menu prompts by showing user input in full)
 static unsigned long rx_buffer[UART_BUFFER_SIZE];
 static unsigned long tx_buffer[UART_BUFFER_SIZE];
 
@@ -256,6 +260,7 @@ void uart0_interrupt_get_string(char* static_buffer, unsigned long length, unsig
 		}
 		else if ((c != '\n') && (c != '\r'))	// If its a real character add it to the static buffer while checking overflow
 		{
+			
 			if (*ptr < length - 1)	// As long as buffer is not full, put the character in we should continue to build the string
 			{
 				static_buffer[(*ptr)++] = c;
@@ -288,13 +293,23 @@ void uart0_interrupt_send_string(const char* string)
 		{
 			ring_buffer_write(&tx_ring_buffer, '\r');
 		}
-		ring_buffer_write(&tx_ring_buffer, *string);
-		// If the TX FIFO is empty AND the ISR doesn't "own" the ring buffer, start the transmission by writing a byte to the UART_DR_R.
-		// If the transmission is enabled, then the ISR "owns" UART_DR_R, we have to treat it like its utilizing it. 
-		if ((UART0_FR_R & 0x80) && !(UART0_IM_R & 0x20))
+		
+		// If the TX FIFO is empty AND the ISR doesn't "own" the data register, start the transmission by writing a byte to the UART_DR_R.
+		if (!(UART0_IM_R & 0x20))	// if transmission is not enabled
 		{
-			UART0_DR_R = ring_buffer_read(&tx_ring_buffer);
-			uart0_interrupt_enable_transmit();
+			if (!(UART0_FR_R & 0x20))	// if the TX FIFO is NOT full, in other words it has space
+			{
+				UART0_DR_R = *string;	// we should write the char directly into the data register and enable the transmission
+				uart0_interrupt_enable_transmit();
+			}
+			else	// if the TXFIFO is indeed full, we should write the char to the tx ring buffer instead
+			{
+				ring_buffer_write(&tx_ring_buffer, *string);
+			}
+		}
+		else	// If the transmission is enabled, then the ISR "owns" UART_DR_R, we have to treat it like its utilizing it. Write to the tx ring buffer to not interfere.
+		{
+			ring_buffer_write(&tx_ring_buffer, *string);			
 		}
 		string++;
 	}
